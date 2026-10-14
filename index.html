@@ -1,0 +1,1609 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event Tracker Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  ::-webkit-scrollbar { height: 8px; width: 8px; }
+  ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 999px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  .fade-in { animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-down { animation: slideDown 0.25s ease; }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3e%3cpath stroke-linecap='round' stroke-linejoin='round' d='m19.5 8.25-7.5 7.5-7.5-7.5'/%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 0.6rem center; background-size: 1rem; padding-right: 2rem; }
+
+  /* --- Jahresstreifen (Zeitleiste) add-on view, light theme to match the rest --- */
+  .tl-list { display: flex; flex-direction: column; }
+  .tl-ticket { display: grid; grid-template-columns: 50px 2px 1fr auto; align-items: start; gap: 12px; padding: 12px 10px; border-top: 1px solid #f1f5f9; cursor: pointer; transition: background .15s ease; }
+  .tl-ticket:first-child { border-top: none; }
+  .tl-ticket:hover { background: #f8fafc; }
+  .tl-ticket.tl-selected { background: #eef2ff; }
+  .tl-ticket.tl-flag { background: #fff1f2; }
+  .tl-date { display: flex; flex-direction: column; align-items: center; line-height: 1; padding-top: 2px; }
+  .tl-date .tl-daynum { font-size: 1.3rem; font-weight: 800; color: #0f172a; }
+  .tl-date .tl-month { font-size: 10px; color: #94a3b8; letter-spacing: .04em; margin-top: 2px; font-weight: 600; }
+  .tl-spine { align-self: stretch; border-radius: 2px; }
+  .tl-spine.tl-dot-open { background: #f59e0b; }
+  .tl-spine.tl-dot-done { background: #10b981; }
+  .tl-body { min-width: 0; }
+  .tl-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .tl-ev { font-weight: 700; font-size: 0.95rem; color: #0f172a; }
+  .tl-meta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+  .tl-startups { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .tl-year-divider { display: flex; align-items: center; gap: 10px; padding: 14px 10px 4px; }
+  .tl-year-divider .tl-year-num { font-size: 0.95rem; font-weight: 700; color: #94a3b8; }
+  .tl-year-divider .tl-year-line { flex: 1; height: 1px; background: #e2e8f0; }
+  @media (max-width: 600px) {
+    .tl-ticket { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+    .tl-date { order: 1; }
+    .tl-spine { display: none; }
+    .tl-body { order: 2; flex: 1 1 calc(100% - 62px); min-width: 0; }
+    .tl-status { order: 3; flex-basis: 100%; padding-left: 62px; }
+  }
+</style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+<div class="max-w-6xl mx-auto px-4 sm:px-6 py-4 sm:py-5">
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
+
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
+    <div class="flex items-center gap-3">
+      <div class="h-10 w-10 rounded-lg border border-slate-200 flex items-center justify-center shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-700" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-13.5-6h.008v.008H7.5V12.75Zm3 0h.008v.008h-.008V12.75Zm3 0h.008v.008h-.008V12.75Zm-6 3h.008v.008H7.5v-3Zm3 0h.008v.008h-.008v-3Zm3 0h.008v.008h-.008v-3Z" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 leading-tight">EVENT TRACKER</h1>
+        <p id="currentDate" class="text-[11px] font-semibold text-slate-400 tracking-wide uppercase"></p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <span id="fallbackIndicator" class="hidden items-center gap-1.5 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full">
+        <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span> Beispieldaten
+      </span>
+      <button id="helpBtn" title="Hilfe" aria-label="Hilfe" class="cursor-pointer inline-flex items-center justify-center h-8 w-8 rounded-full text-slate-500 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.78.375-1.451 1.007-1.451 1.887v.75m0 3.75h.008M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+        </svg>
+      </button>
+      <button id="exportCsvBtn" class="cursor-pointer inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 px-3 py-1.5 rounded-lg transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+        </svg>
+        CSV
+      </button>
+      <button id="refreshBtn" onclick="loadData()" class="cursor-pointer inline-flex items-center gap-1.5 text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 disabled:opacity-60 disabled:cursor-not-allowed px-3 py-1.5 rounded-lg transition">
+        <svg id="refreshIcon" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+        </svg>
+        <span id="refreshLabel">Aktualisieren</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Initial Loader -->
+  <div id="initialLoader" class="flex flex-col items-center justify-center py-20 text-center">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-slate-300 animate-spin mb-3" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"></path>
+    </svg>
+    <p class="text-sm font-medium text-slate-400">Lade Event-Daten…</p>
+  </div>
+
+  <div id="mainContent" class="hidden">
+
+  <!-- Stat Cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
+    <div class="rounded-xl border border-slate-200 p-3">
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Events Gesamt</p>
+      <span id="statTotalEvents" class="text-xl font-extrabold text-slate-900">–</span>
+    </div>
+    <div id="statCardTop" class="cursor-pointer rounded-xl border border-slate-200 hover:border-emerald-300 hover:bg-emerald-50/40 p-3 transition">
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Top Events</p>
+      <span id="statTopEvents" class="text-xl font-extrabold text-emerald-600">–</span>
+      <span class="text-xs text-slate-400 font-medium">Rating ≥ 8</span>
+      <p id="statTopContacts" class="text-[11px] text-slate-400 mt-0.5"></p>
+    </div>
+    <div id="statCardLow" class="cursor-pointer rounded-xl border border-slate-200 hover:border-rose-300 hover:bg-rose-50/40 p-3 transition">
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Low Performer</p>
+      <span id="statLowPerformers" class="text-xl font-extrabold text-rose-600">–</span>
+      <span class="text-xs text-slate-400 font-medium">Rating &lt; 5</span>
+      <p id="statLowContacts" class="text-[11px] text-slate-400 mt-0.5"></p>
+    </div>
+    <div class="rounded-xl border border-slate-200 p-3">
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Kontakte Gesamt</p>
+      <span id="statTotalContacts" class="text-xl font-extrabold text-sky-600">–</span>
+    </div>
+  </div>
+
+  <!-- Event List -->
+  <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+    <h2 class="text-base font-bold text-slate-900">Event-Liste</h2>
+    <div class="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5">
+      <button id="viewTableBtn" class="view-toggle-btn cursor-pointer inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition bg-white text-slate-900 shadow-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" /></svg>
+        Tabelle
+      </button>
+      <button id="viewTimelineBtn" class="view-toggle-btn cursor-pointer inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-md transition text-slate-500 hover:text-slate-700">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
+        Jahresstreifen
+      </button>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="flex flex-wrap items-center gap-2 mb-3">
+    <div class="relative flex-1 min-w-[220px]">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+      </svg>
+      <input id="searchInput" type="text" placeholder="Event, Startup oder Kontakt suchen…"
+        class="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 outline-none transition" />
+    </div>
+    <div class="flex flex-wrap gap-2">
+      <div class="relative">
+        <select id="yearFilter" class="cursor-pointer text-sm rounded-lg border border-slate-200 bg-slate-50 pl-3 pr-9 py-2 min-w-[100px] outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 transition">
+          <option value="">Jahr: Alle</option>
+        </select>
+        <button type="button" data-clear-for="yearFilter" class="filter-clear-btn hidden absolute right-6 top-1/2 -translate-y-1/2 h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div class="relative">
+        <select id="eventFilter" class="cursor-pointer text-sm rounded-lg border border-slate-200 bg-slate-50 pl-3 pr-9 py-2 max-w-[140px] outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 transition">
+          <option value="">Event: Alle</option>
+        </select>
+        <button type="button" data-clear-for="eventFilter" class="filter-clear-btn hidden absolute right-6 top-1/2 -translate-y-1/2 h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div class="relative">
+        <select id="employeeFilter" class="cursor-pointer text-sm rounded-lg border border-slate-200 bg-slate-50 pl-3 pr-9 py-2 min-w-[120px] outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 transition">
+          <option value="">Mitarbeiter: Alle</option>
+        </select>
+        <button type="button" data-clear-for="employeeFilter" class="filter-clear-btn hidden absolute right-6 top-1/2 -translate-y-1/2 h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div class="relative">
+        <select id="statusFilter" class="cursor-pointer text-sm rounded-lg border border-slate-200 bg-slate-50 pl-3 pr-9 py-2 min-w-[100px] outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 transition">
+          <option value="">Status: Alle</option>
+          <option value="Offen">Offen</option>
+          <option value="Erledigt">Erledigt</option>
+        </select>
+        <button type="button" data-clear-for="statusFilter" class="filter-clear-btn hidden absolute right-6 top-1/2 -translate-y-1/2 h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div class="relative">
+        <select id="ratingFilter" class="cursor-pointer text-sm rounded-lg border border-slate-200 bg-slate-50 pl-3 pr-9 py-2 min-w-[110px] outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 transition">
+          <option value="">Rating: Alle</option>
+          <option value="top">Top (8–10)</option>
+          <option value="mid">Mittel (5–7)</option>
+          <option value="low">Low (&lt;5)</option>
+        </select>
+        <button type="button" data-clear-for="ratingFilter" class="filter-clear-btn hidden absolute right-6 top-1/2 -translate-y-1/2 h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+      <div class="relative flex items-center gap-1 border border-slate-200 bg-slate-50 rounded-lg pl-2 pr-2 py-1.5">
+        <span class="text-xs text-slate-400 font-medium">Von</span>
+        <input id="dateFromFilter" type="date" class="cursor-pointer text-sm bg-transparent outline-none w-[130px]" />
+        <span class="text-xs text-slate-400 font-medium">Bis</span>
+        <input id="dateToFilter" type="date" class="cursor-pointer text-sm bg-transparent outline-none w-[130px]" />
+        <button type="button" id="clearDateFilterBtn" class="hidden h-4 w-4 items-center justify-center rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Panel -->
+  <div id="detailPanel" class="hidden slide-down mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+    <div class="flex items-start justify-between gap-3 mb-3">
+      <div class="min-w-0">
+        <h3 id="detailEventTitle" class="text-lg font-extrabold text-slate-900 leading-tight"></h3>
+        <div id="detailEmployees" class="flex flex-wrap items-center gap-1.5 mt-2"></div>
+        <div id="detailMeta" class="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-500"></div>
+      </div>
+      <button id="detailCloseBtn" class="cursor-pointer h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 bg-white hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+
+    <div class="flex flex-wrap gap-2 mb-4">
+      <button id="copyAllContactsBtn" class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 px-2.5 py-1.5 rounded-lg transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+        </svg>
+        <span id="copyAllContactsLabel">Alle Kontakte kopieren</span>
+      </button>
+      <button id="exportEventCsvBtn" class="cursor-pointer inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 px-2.5 py-1.5 rounded-lg transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+        </svg>
+        Dieses Event als CSV
+      </button>
+    </div>
+
+    <!-- Mini stats -->
+    <div class="grid grid-cols-3 gap-1.5 mb-3">
+      <div class="rounded-lg bg-white border border-slate-200 px-2.5 py-2 text-center">
+        <p id="detailStatContacts" class="text-xl font-extrabold text-sky-600">0</p>
+        <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Kontakte</p>
+        <p id="detailStatContactsNamed" class="text-[10px] text-slate-400 mt-0.5"></p>
+      </div>
+      <div class="rounded-lg bg-white border border-slate-200 px-2.5 py-2 text-center">
+        <p id="detailStatStartups" class="text-xl font-extrabold text-violet-600">0</p>
+        <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Startups</p>
+      </div>
+      <div class="rounded-lg bg-white border border-slate-200 px-2.5 py-2 text-center">
+        <p id="detailStatRating" class="text-xl font-extrabold text-emerald-600">0</p>
+        <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">Ø Rating</p>
+      </div>
+    </div>
+
+    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Kontakte (<span id="detailContactCount">0</span>) — antippen für Details</p>
+    <div id="detailContactsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1.5 mb-3"></div>
+
+    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Startups (<span id="detailStartupCount">0</span>)</p>
+    <div id="detailStartupsList" class="flex flex-wrap gap-2 mb-3"></div>
+
+    <div id="detailTipsSection" class="hidden mt-2 pt-3 border-t border-slate-200">
+      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+        Tipps &amp; Logistik <span class="normal-case font-normal text-slate-400">(über alle Jahre gesammelt)</span>
+      </p>
+      <div id="detailTipsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-1.5"></div>
+    </div>
+  </div>
+
+  <!-- Top Event Insight -->
+  <div id="topEventBanner" class="hidden items-center gap-3 mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+    <span class="text-xl shrink-0">🏆</span>
+    <p id="topEventText" class="text-sm text-amber-800"></p>
+  </div>
+
+  <!-- Table -->
+  <div id="viewTable" class="overflow-x-auto border border-slate-200 rounded-xl">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-[11px] font-bold text-slate-300 uppercase tracking-wide bg-slate-900">
+          <th class="px-3 py-2 whitespace-nowrap cursor-pointer select-none hover:text-white transition" data-sort-key="employee">Mitarbeiter <span class="sort-arrow"></span></th>
+          <th class="px-3 py-2 whitespace-nowrap cursor-pointer select-none hover:text-white transition" data-sort-key="event">Event <span class="sort-arrow"></span></th>
+          <th class="px-3 py-2 whitespace-nowrap cursor-pointer select-none hover:text-white transition" data-sort-key="rating">Rating <span class="sort-arrow"></span></th>
+          <th class="px-3 py-2 whitespace-nowrap cursor-pointer select-none hover:text-white transition" data-sort-key="contactsCount">Kontakte <span class="sort-arrow"></span></th>
+          <th class="px-3 py-2 whitespace-nowrap">Kontaktnamen</th>
+          <th class="px-3 py-2 whitespace-nowrap">Startups</th>
+          <th class="px-3 py-2 whitespace-nowrap cursor-pointer select-none hover:text-white transition" data-sort-key="date">Datum <span class="sort-arrow"></span></th>
+          <th class="px-3 py-2 whitespace-nowrap cursor-pointer select-none hover:text-white transition" data-sort-key="status">Status <span class="sort-arrow"></span></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody" class="divide-y divide-slate-100">
+        <!-- rows injected here -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Jahresstreifen (Zeitleiste) -->
+  <div id="viewTimeline" class="hidden border border-slate-200 rounded-xl overflow-hidden">
+    <div id="timelineList" class="tl-list">
+      <!-- tickets injected here -->
+    </div>
+  </div>
+
+  <div id="emptyState" class="hidden flex-col items-center justify-center py-14 text-center">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 text-slate-300 mb-2" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+    </svg>
+    <p class="text-sm font-medium text-slate-500">Keine Einträge gefunden</p>
+    <p class="text-xs text-slate-400 mt-1">Versuche einen anderen Suchbegriff oder Filter.</p>
+  </div>
+
+  <!-- Footer / Pagination -->
+  <div class="flex items-center justify-between mt-4 text-xs text-slate-400">
+    <span id="resultCount">0 Einträge</span>
+    <div class="flex items-center gap-2">
+      <span id="pageRangeLabel">1–10</span>
+      <button id="prevPageBtn" class="cursor-pointer disabled:cursor-not-allowed h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m15 19-7-7 7-7" /></svg>
+      </button>
+      <span id="pageNumberLabel" class="h-7 min-w-7 px-2 flex items-center justify-center rounded-md border border-slate-200 font-semibold text-slate-600">1</span>
+      <button id="nextPageBtn" class="cursor-pointer disabled:cursor-not-allowed h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m9 5 7 7-7 7" /></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="text-right mt-2">
+    <span id="lastUpdated" class="text-[11px] text-slate-300"></span>
+    <div id="fetchErrorBox" class="hidden mt-2 text-left text-xs text-rose-600 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2"></div>
+  </div>
+
+  </div>
+
+</div>
+</div>
+
+<!-- Contact Info Modal -->
+<div id="contactModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4 bg-slate-900/40">
+  <div class="w-full max-w-sm bg-white rounded-2xl border border-slate-200 shadow-xl">
+    <div class="flex items-start justify-between gap-3 px-5 pt-5">
+      <div class="flex items-center gap-3 min-w-0">
+        <div id="modalAvatar" class="h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"></div>
+        <div class="min-w-0">
+          <p id="modalName" class="text-lg font-extrabold text-slate-900 leading-tight truncate"></p>
+          <p id="modalCompany" class="text-xs text-slate-400 mt-0.5 truncate"></p>
+        </div>
+      </div>
+      <button id="modalCloseBtn" class="cursor-pointer h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+    <div id="modalBody" class="px-5 py-4 space-y-2"></div>
+    <div class="px-5 pb-5">
+      <button id="modalCopyBtn" class="cursor-pointer w-full inline-flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-700 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 px-3 py-2 rounded-lg transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0 0 13.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 0 1-.75.75H9a.75.75 0 0 1-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 0 1-2.25 2.25H6.75A2.25 2.25 0 0 1 4.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 0 1 1.927-.184" />
+        </svg>
+        <span id="modalCopyLabel">Kontakt kopieren</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Help Modal -->
+<div id="helpModal" class="hidden fixed inset-0 z-50 items-center justify-center p-4 bg-slate-900/40">
+  <div class="w-full max-w-lg max-h-[85vh] flex flex-col bg-white rounded-2xl border border-slate-200 shadow-xl">
+    <div class="flex items-start justify-between gap-3 px-5 pt-5 pb-3 border-b border-slate-100 shrink-0">
+      <h3 class="text-lg font-extrabold text-slate-900 leading-tight">Hilfe &amp; Nutzung</h3>
+      <button id="helpCloseBtn" class="cursor-pointer h-7 w-7 flex items-center justify-center rounded-md border border-slate-200 hover:bg-slate-50 text-slate-400 hover:text-slate-600 transition shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+    <div class="px-5 py-4 overflow-y-auto space-y-5 text-sm text-slate-700 leading-relaxed">
+
+      <div>
+        <p class="text-xs font-bold text-slate-900 uppercase tracking-wide mb-1.5">Event per E-Mail melden</p>
+        <p>Schreib nach einem Event einfach eine formlose E-Mail an <strong class="text-slate-900">eventtracking@spinlab.co</strong>, Betreff = Event-Name. Die Automatik liest die Mail aus und trägt sie hier ins Dashboard ein — du musst nichts manuell eintragen.</p>
+        <p class="mt-1.5">In der Mail sollten diese Infos irgendwo vorkommen: Event-Name, Datum, deine Bewertung (1–10), wie viele Leute du insgesamt gesprochen hast, Kontakte, an die du dich namentlich erinnerst, interessante Startups (oder "keine"), ob noch etwas offen ist oder alles erledigt ist, und optional Tipps zu Anreise/Unterkunft/Side-Events für alle, die später mal hinfahren.</p>
+        <p class="mt-1.5">Format für Kontakte, einen pro Zeile oder getrennt durch Komma/Semikolon:</p>
+        <p class="mt-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 font-mono text-xs text-slate-600">Name (Beruf/Rolle) | Notiz | E-Mail</p>
+        <p class="mt-1.5">Runde Klammern = was die Person macht (Rolle/Firma). Nach einem "|" = eine Notiz. E-Mail wird automatisch erkannt. Alles außer dem Namen ist optional.</p>
+      </div>
+
+      <div>
+        <p class="text-xs font-bold text-slate-900 uppercase tracking-wide mb-1.5">Rating (1–10)</p>
+        <p>Deine persönliche Einschätzung, wie lohnenswert das Event war.</p>
+        <div class="flex items-center gap-2 mt-1.5">
+          <span class="inline-flex items-center justify-center h-6 w-8 rounded-md text-xs font-bold bg-rose-50 text-rose-700">&lt;5</span><span class="text-xs text-slate-500">eher nicht lohnenswert</span>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="inline-flex items-center justify-center h-6 w-8 rounded-md text-xs font-bold bg-amber-50 text-amber-700">5–7</span><span class="text-xs text-slate-500">okay, mit Einschränkungen</span>
+        </div>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="inline-flex items-center justify-center h-6 w-8 rounded-md text-xs font-bold bg-emerald-50 text-emerald-700">8–10</span><span class="text-xs text-slate-500">sehr lohnenswert, Top Event</span>
+        </div>
+      </div>
+
+      <div>
+        <p class="text-xs font-bold text-slate-900 uppercase tracking-wide mb-1.5">Status</p>
+        <div class="flex items-center gap-2 mt-1">
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>Offen</span>
+          <span class="text-xs text-slate-500">es gibt noch etwas nachzufassen (z. B. Kontakt melden)</span>
+        </div>
+        <div class="flex items-center gap-2 mt-1.5">
+          <span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Erledigt</span>
+          <span class="text-xs text-slate-500">alles zu diesem Event ist abgeschlossen</span>
+        </div>
+        <p class="mt-1.5 text-xs text-slate-500">Bleibt ein Event ca. 7 Tage auf "Offen", bekommst du automatisch eine Erinnerungsmail zum Nachfassen. Nach ca. 90 Tagen fragt dich die Automatik außerdem, ob eine Neubewertung sinnvoll ist.</p>
+      </div>
+
+      <div>
+        <p class="text-xs font-bold text-slate-900 uppercase tracking-wide mb-1.5">Dashboard nutzen</p>
+        <ul class="list-disc pl-4 space-y-1 text-slate-600 marker:text-slate-400">
+          <li>Mit dem Suchfeld oben nach Event, Startup oder Kontakt suchen.</li>
+          <li>Mit den Filtern nach Jahr, Event, Mitarbeiter, Status, Rating oder Zeitraum einschränken.</li>
+          <li>Oben rechts über der Liste zwischen "Tabelle" und "Jahresstreifen" (einer chronologischen Zeitleiste) umschalten.</li>
+          <li>Auf eine Zeile bzw. einen Eintrag klicken öffnet die Detailansicht mit allen Kontakten, Startups und ggf. Reise-/Logistik-Tipps.</li>
+          <li>Auf einen Kontakt in der Detailansicht klicken zeigt E-Mail, Rolle und alle Notizen zu dieser Person.</li>
+          <li>"Alle Kontakte kopieren" kopiert alle Kontakte eines Events in die Zwischenablage, z. B. zum Einfügen in eine Mail.</li>
+          <li>Mit "CSV" lässt sich die komplette Liste (oder in der Detailansicht nur ein einzelnes Event) als Excel-Datei exportieren.</li>
+          <li>"Tipps &amp; Logistik" in der Detailansicht sammelt Anreise-, Unterkunfts- und sonstige Tipps automatisch über alle Jahre hinweg für Events mit demselben Namen.</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Password Gate -->
+<div id="authGate" class="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 p-4">
+  <div class="w-full max-w-sm bg-white rounded-2xl border border-slate-200 shadow-xl p-6">
+    <h2 class="text-lg font-extrabold text-slate-900 mb-1">Event Tracker</h2>
+    <p class="text-sm text-slate-500 mb-4">Bitte Passwort eingeben.</p>
+    <form id="authForm">
+      <input id="authInput" type="password" autocomplete="current-password" placeholder="Passwort"
+        class="w-full px-3 py-2 text-sm rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:ring-2 focus:ring-slate-900/10 focus:border-slate-300 outline-none transition mb-2" />
+      <p id="authError" class="hidden text-xs text-rose-600 mb-2">Falsches Passwort.</p>
+      <button type="submit" class="w-full cursor-pointer text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 px-3 py-2 rounded-lg transition">Anmelden</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzy2s8hqhgUoQDzkXPBVADVCgz3G2V5KSV5FNM-ROkQp-CBpkDueqZv8BwesO8Z7720/exec";
+  const PAGE_SIZE = 30;
+
+  const SAMPLE_DATA = [
+    { employee: "Max M.", event: "DMEXCO 2026", rating: 6, contactsCount: 10, contactNames: ["Jeremy (ExciteLab)"], startups: ["ExciteLab"], date: "2026-08-24", status: "Offen",
+      travelTip: "Bahnhof Köln Deutz ist näher an den Hallen als der Hauptbahnhof.",
+      stayTip: "Hotel Mondial am Dom, ca. 10 Min. zu Fuß, Frühbucher-Preise nutzen.",
+      sideEventTip: "OMR-Aftershow-Party am ersten Abend, Einladung über den Aussteller-Newsletter.",
+      otherTip: "Badge vorab online drucken spart am Eingang viel Wartezeit." },
+    { employee: "Chef T.", event: "Slush 2026", rating: 9, contactsCount: 2, contactNames: ["Bastian B. (Atlantic Labs)", "Birgit H."], startups: ["Gigafina", "Logic Dev", "Atlantic Labs"], date: "2026-06-18", status: "Erledigt" },
+    { employee: "Sarah K.", event: "VCs Dresden", rating: 8, contactsCount: 15, contactNames: ["Frank K.", "Birgit H."], startups: ["Keine"], date: "2026-08-20", status: "Erledigt" }
+  ];
+
+  let allEvents = [];
+  let currentPage = 1;
+  let eventGroups = [];
+  let indexToGroup = new Map();
+  let selectedGroupKey = null;
+  let currentDetailContacts = [];
+  let currentDetailGroup = null;
+  let sortState = { key: null, dir: 1 };
+  let eventTipsIndex = new Map();
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text);
+    }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      return Promise.resolve();
+    } catch (e) {
+      return Promise.reject(e);
+    }
+  }
+
+  const AVATAR_COLORS = ["bg-indigo-500","bg-violet-500","bg-rose-500","bg-amber-500","bg-emerald-500","bg-sky-500","bg-purple-500","bg-teal-500"];
+
+  function avatarColor(name) {
+    let hash = 0;
+    for (let i = 0; i < (name || "").length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  }
+
+  function initials(name) {
+    return (name || "?").split(" ").filter(Boolean).map(w => w[0]).slice(0, 2).join("").toUpperCase();
+  }
+
+  function ratingCell(rating) {
+    let cls = "bg-rose-50 text-rose-700";
+    if (rating >= 8) cls = "bg-emerald-50 text-emerald-700";
+    else if (rating >= 5) cls = "bg-amber-50 text-amber-700";
+    return `<span class="inline-flex items-center justify-center h-7 w-9 rounded-md text-xs font-bold ${cls}">${rating}</span>`;
+  }
+
+  function statusPill(status) {
+    if (status === "Erledigt") {
+      return `<span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-200"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Erledigt</span>`;
+    }
+    return `<span class="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-200"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>Offen</span>`;
+  }
+
+  function startupChip(text) {
+    return `<span class="inline-block text-xs font-medium px-2 py-1 rounded-full bg-slate-100 text-slate-600 whitespace-nowrap">${escapeHtml(text)}</span>`;
+  }
+
+  const STARTUP_COLORS = [
+    "bg-indigo-50 text-indigo-700 border-indigo-200",
+    "bg-violet-50 text-violet-700 border-violet-200",
+    "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",
+    "bg-sky-50 text-sky-700 border-sky-200",
+    "bg-teal-50 text-teal-700 border-teal-200",
+    "bg-amber-50 text-amber-700 border-amber-200",
+    "bg-rose-50 text-rose-700 border-rose-200"
+  ];
+
+  function startupColor(name) {
+    let hash = 0;
+    for (let i = 0; i < (name || "").length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    return STARTUP_COLORS[Math.abs(hash) % STARTUP_COLORS.length];
+  }
+
+  function startupBadge(text) {
+    return `<span class="inline-flex items-center gap-1.5 text-sm font-semibold px-2.5 py-1 rounded-lg border ${startupColor(text)}">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+      </svg>
+      ${escapeHtml(text)}
+    </span>`;
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str ?? "";
+    return div.innerHTML;
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return "–";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }
+
+  function toList(value) {
+    if (Array.isArray(value)) return value.filter(v => v && String(v).trim() && String(v).trim().toLowerCase() !== "keine");
+    if (typeof value === "string") return value.split(/[,;]/).map(s => s.trim()).filter(s => s && s.toLowerCase() !== "keine");
+    return [];
+  }
+
+  // Zerlegt eine Kontaktliste in einzelne Kontakte, OHNE an Komma/Semikolon/
+  // Zeilenumbruch INNERHALB von Klammern zu schneiden. Bereits fälschlich
+  // getrennte Bruchstücke (z. B. "Talg (KWS" + "Vorstandsmitglied)") werden
+  // wieder zusammengeführt, bis alle Klammern aufgehen.
+  function splitContactList(value) {
+    let parts = [];
+    if (Array.isArray(value)) {
+      parts = value.map(v => String(v));
+    } else if (typeof value === "string") {
+      let buf = "", depth = 0;
+      for (const ch of value) {
+        if (ch === "(") depth++;
+        else if (ch === ")") depth = Math.max(0, depth - 1);
+        if (depth === 0 && (ch === "," || ch === ";" || ch === "\n")) { parts.push(buf); buf = ""; }
+        else buf += ch;
+      }
+      parts.push(buf);
+    } else {
+      return [];
+    }
+
+    const merged = [];
+    let carry = "";
+    for (const p of parts) {
+      carry = carry ? carry + " " + p.trim() : p.trim();
+      const opens = (carry.match(/\(/g) || []).length;
+      const closes = (carry.match(/\)/g) || []).length;
+      if (opens > closes) continue;
+      merged.push(carry);
+      carry = "";
+    }
+    if (carry.trim()) merged.push(carry);
+
+    return merged
+      .map(s => s.replace(/\s+/g, " ").trim())
+      .filter(s => s && s.toLowerCase() !== "keine");
+  }
+
+  function stripEmail(name) {
+    if (!name) return "Unbekannt";
+    return String(name).replace(/<[^>]*>/g, "").trim() || String(name).trim();
+  }
+
+  // Kontakt-Konventionen:
+  //   "Talg (KWS Vorstandsmitglied)"          -> Klammer = Beruf/Position
+  //   "Michael Kretzschmar | Ist Fan"         -> nach "|" (oder " - ") = Notiz
+  //   "... michi@staatskanzlei.de"            -> E-Mail / Link automatisch
+  // -> { name, company (=Position), email, url, notes (String), noteList (Array) }
+  function parseContact(raw) {
+    let str = String(raw).replace(/\s+/g, " ").trim();
+    let email = "";
+    let url = "";
+
+    const emailMatch = str.match(/[\w.+-]+@[\w-]+\.[a-zA-Z]{2,}/);
+    if (emailMatch) {
+      email = emailMatch[0];
+      str = str.replace(emailMatch[0], " ");
+    }
+
+    const urlMatch = str.match(/(https?:\/\/[^\s,;|]+|(?:www\.)?linkedin\.com\/[^\s,;|]+)/i);
+    if (urlMatch) {
+      url = urlMatch[0].replace(/^www\./i, "");
+      str = str.replace(urlMatch[0], " ");
+    }
+
+    // Klammer-Inhalt = Beruf/Position, z. B. "(KWS Vorstandsmitglied)".
+    // Steht dort AUCH noch eine Notiz drin (Rolle | Notiz | ...), wird nur
+    // das erste Teilstück als Rolle genommen, der Rest als Notiz - damit nie
+    // ein "|" im Rollen-Feld übrig bleibt, egal ob Notiz/Mail innerhalb oder
+    // außerhalb der Klammer stehen.
+    const roles = [];
+    const parenNotes = [];
+    str = str.replace(/\(([^)]*)\)/g, (_, inner) => {
+      const parts = inner
+        .split(/\s*[|/;:]\s*|\s+[-–—]\s+/)
+        .map(s => s.replace(/^[\s,;|/–—-]+|[\s,;|/–—-]+$/g, "").trim())
+        .filter(Boolean);
+      if (parts.length) {
+        roles.push(parts.shift());
+        parenNotes.push(...parts);
+      }
+      return " ";
+    });
+
+    // Rest an "|", "/", ";", ":" oder " - " zerlegen: erstes Segment = Name,
+    // alles Weitere = Notiz(en). Trenner selbst werden nie angezeigt.
+    const segments = str
+      .split(/\s*[|/;:]\s*|\s+[-–—]\s+/)
+      .map(s => s.replace(/^[\s,;|/–—-]+|[\s,;|/–—-]+$/g, "").trim())
+      .filter(Boolean);
+
+    const name = segments.shift() || "";
+    const noteList = [...parenNotes, ...segments];
+    const notes = noteList.join(" · ");
+    const company = roles.join(", ");
+
+    return { name: name || String(raw).trim(), company, email, url, notes, noteList };
+  }
+
+  function rowKey(e, index) {
+    return `${e.employee}|${e.event}|${e.date}|${index}`;
+  }
+
+  function cleanTip(value) {
+    const t = (value == null ? "" : String(value)).trim();
+    if (!t || t === "-" || t.toLowerCase() === "keine") return "";
+    return t;
+  }
+
+  // Event-Name auf einen stabilen Schlüssel reduzieren (Jahreszahl + Sonderzeichen
+  // raus), damit z. B. "DMEXCO 2026" und "DMEXCO 2027" dieselben Tipps teilen.
+  function normalizeEventKey(name) {
+    return String(name || "")
+      .toLowerCase()
+      .replace(/\b(19|20)\d{2}\b/g, " ")
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .trim()
+      .replace(/\s+/g, " ");
+  }
+
+  const TIP_CATEGORIES = [
+    { key: "travel", field: "travelTip", label: "Anreise" },
+    { key: "stay", field: "stayTip", label: "Unterkunft" },
+    { key: "sideEvents", field: "sideEventTip", label: "Side-Events" },
+    { key: "other", field: "otherTip", label: "Sonstige Tipps" }
+  ];
+
+  // Sammelt Anreise-/Unterkunft-/Side-Event-/Sonstige-Tipps über ALLE geladenen
+  // Einträge hinweg (nicht nur die aktuell gefilterten) und gruppiert sie nach
+  // normalisiertem Event-Namen, damit sie jahresübergreifend zusammenkommen.
+  function buildEventTipsIndex(events) {
+    const idx = new Map();
+    events.forEach(e => {
+      const key = normalizeEventKey(e.event);
+      if (!key) return;
+      if (!idx.has(key)) {
+        const entry = { seen: new Set() };
+        TIP_CATEGORIES.forEach(c => { entry[c.key] = []; });
+        idx.set(key, entry);
+      }
+      const entry = idx.get(key);
+      TIP_CATEGORIES.forEach(c => {
+        const val = e[c.field];
+        if (!val) return;
+        const dedupKey = c.key + "|" + val.toLowerCase();
+        if (entry.seen.has(dedupKey)) return;
+        entry.seen.add(dedupKey);
+        entry[c.key].push(val);
+      });
+    });
+    return idx;
+  }
+
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+  function buildEventGroups(events) {
+    const byName = new Map();
+    events.forEach((e, idx) => {
+      const key = (e.event || "").trim().toLowerCase();
+      if (!byName.has(key)) byName.set(key, []);
+      byName.get(key).push({ ...e, _idx: idx });
+    });
+
+    const clusters = [];
+    byName.forEach((records) => {
+      const withDate = records
+        .filter(r => r.date && !isNaN(new Date(r.date).getTime()))
+        .sort((a, b) => new Date(a.date) - new Date(b.date));
+      const withoutDate = records.filter(r => !(r.date && !isNaN(new Date(r.date).getTime())));
+
+      let current = [];
+      withDate.forEach(r => {
+        if (current.length === 0) {
+          current.push(r);
+        } else {
+          const lastTime = new Date(current[current.length - 1].date).getTime();
+          const thisTime = new Date(r.date).getTime();
+          if (thisTime - lastTime <= WEEK_MS) {
+            current.push(r);
+          } else {
+            clusters.push(current);
+            current = [r];
+          }
+        }
+      });
+      if (current.length) clusters.push(current);
+      withoutDate.forEach(r => clusters.push([r]));
+    });
+
+    return clusters.map((records, gIdx) => {
+      const employees = [...new Set(records.map(r => r.employee))];
+
+      const contactNames = [];
+      const seenContacts = new Set();
+      records.forEach(r => r.contactNames.forEach(c => {
+        const norm = c.trim().toLowerCase();
+        if (!seenContacts.has(norm)) { seenContacts.add(norm); contactNames.push(c); }
+      }));
+
+      const startups = [];
+      const seenStartups = new Set();
+      records.forEach(r => r.startups.forEach(s => {
+        const norm = s.trim().toLowerCase();
+        if (!seenStartups.has(norm)) { seenStartups.add(norm); startups.push(s); }
+      }));
+
+      const dates = records.map(r => r.date).filter(Boolean).sort();
+      const ratings = records.map(r => r.rating).filter(r => !isNaN(r));
+      const avgRating = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length) : 0;
+      const statuses = [...new Set(records.map(r => r.status))];
+      const totalContactsCount = records.reduce((sum, r) => sum + (Number(r.contactsCount) || 0), 0);
+
+      return {
+        key: "grp_" + gIdx + "_" + (records[0].event || "").trim().toLowerCase(),
+        event: records[0].event,
+        records,
+        recordIndexes: records.map(r => r._idx),
+        employees,
+        contactNames,
+        startups,
+        dateStart: dates[0] || "",
+        dateEnd: dates[dates.length - 1] || "",
+        avgRating,
+        statuses,
+        totalContactsCount
+      };
+    });
+  }
+
+  function rebuildGroupIndex(events) {
+    eventGroups = buildEventGroups(events);
+    indexToGroup = new Map();
+    eventGroups.forEach(g => g.recordIndexes.forEach(idx => indexToGroup.set(idx, g)));
+  }
+
+  const VALID_STATUSES = ["Offen", "Erledigt"];
+
+  function normalizeRecord(raw) {
+    const rawStatus = raw.status ?? raw.Status ?? "Offen";
+    const status = VALID_STATUSES.includes(rawStatus) ? rawStatus : "Offen";
+    const rawDate = raw.date ?? raw.datum ?? raw.Datum ?? raw.eintragsdatum ?? raw.Eintragsdatum ?? "";
+    const date = (rawDate && !isNaN(new Date(rawDate).getTime())) ? rawDate : "";
+
+    return {
+      employee: stripEmail(raw.employee || raw.mitarbeiter || raw.Mitarbeiter),
+      event: raw.event || raw.Event || "Unbenanntes Event",
+      rating: Number(raw.rating ?? raw.Rating ?? raw.bewertung ?? raw.Bewertung ?? 0),
+      contactsCount: Number(
+        raw.contactsCount ?? raw.kontakte ?? raw.Kontakte ?? raw["Anzahl Kontakte"] ??
+        (splitContactList(raw.contactNames || raw.kontaktnamen || raw.Kontaktnamen || raw["Namenswerte Kontakte"]).length) ?? 0
+      ),
+      contactNames: splitContactList(raw.contactNames || raw.kontaktnamen || raw.Kontaktnamen || raw["Namenswerte Kontakte"]),
+      startups: toList(raw.startups || raw.Startups),
+      date: date,
+      status: status,
+      travelTip: cleanTip(raw.travelTip ?? raw.anreise ?? raw.Anreise),
+      stayTip: cleanTip(raw.stayTip ?? raw.unterkunft ?? raw.Unterkunft ?? raw.hotel ?? raw.Hotel ?? raw.accommodation),
+      sideEventTip: cleanTip(raw.sideEventTip ?? raw.sideEvents ?? raw.Sideevents ?? raw["Side-Events"] ?? raw.nebenevents ?? raw.Nebenevents),
+      otherTip: cleanTip(raw.otherTip ?? raw["Sonstige Tipps"] ?? raw.sonstigeTipps ?? raw.SonstigeTipps ?? raw.tipps ?? raw.Tipps ?? raw.sonstiges ?? raw.Sonstiges)
+    };
+  }
+
+  function renderStats(events) {
+    const total = events.length;
+    const totalContacts = events.reduce((sum, e) => sum + (e.contactsCount || 0), 0);
+    const topEventsList = events.filter(e => e.rating >= 8);
+    const lowPerformersList = events.filter(e => e.rating < 5);
+    const topContacts = topEventsList.reduce((sum, e) => sum + (e.contactsCount || 0), 0);
+    const lowContacts = lowPerformersList.reduce((sum, e) => sum + (e.contactsCount || 0), 0);
+
+    document.getElementById("statTotalEvents").textContent = total;
+    document.getElementById("statTopEvents").textContent = topEventsList.length;
+    document.getElementById("statLowPerformers").textContent = lowPerformersList.length;
+    document.getElementById("statTotalContacts").textContent = totalContacts;
+    document.getElementById("statTopContacts").textContent = `${topContacts} Kontakte`;
+    document.getElementById("statLowContacts").textContent = `${lowContacts} Kontakte`;
+  }
+
+  function populateFilters(events) {
+    const employeeSelect = document.getElementById("employeeFilter");
+    const currentEmployee = employeeSelect.value;
+    const employees = [...new Set(events.map(e => e.employee))].sort();
+    employeeSelect.innerHTML = `<option value="">Mitarbeiter: Alle</option>` + employees.map(e => `<option value="${escapeHtml(e)}">${escapeHtml(e)}</option>`).join("");
+    if (employees.includes(currentEmployee)) employeeSelect.value = currentEmployee;
+
+    const eventSelect = document.getElementById("eventFilter");
+    const currentEvent = eventSelect.value;
+    const eventNames = [...new Set(events.map(e => e.event))].sort();
+    eventSelect.innerHTML = `<option value="">Event: Alle</option>` + eventNames.map(ev => `<option value="${escapeHtml(ev)}">${escapeHtml(ev)}</option>`).join("");
+    if (eventNames.includes(currentEvent)) eventSelect.value = currentEvent;
+
+    const yearSelect = document.getElementById("yearFilter");
+    const currentYear = yearSelect.value;
+    const years = [...new Set(
+      events
+        .map(e => (e.date && !isNaN(new Date(e.date).getTime())) ? new Date(e.date).getFullYear() : null)
+        .filter(y => y !== null)
+    )].sort((a, b) => b - a);
+    yearSelect.innerHTML = `<option value="">Jahr: Alle</option>` + years.map(y => `<option value="${y}">${y}</option>`).join("");
+    if (years.map(String).includes(currentYear)) yearSelect.value = currentYear;
+  }
+
+  function showContactModal(contact) {
+    const modal = document.getElementById("contactModal");
+    const color = avatarColor(contact.name);
+    const avatarEl = document.getElementById("modalAvatar");
+    avatarEl.className = `h-11 w-11 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0 ${color}`;
+    avatarEl.textContent = initials(contact.name);
+    document.getElementById("modalName").textContent = contact.name;
+    const modalCompanyEl = document.getElementById("modalCompany");
+    modalCompanyEl.textContent = contact.company || "";
+    modalCompanyEl.hidden = !contact.company;
+
+    const body = document.getElementById("modalBody");
+    const rows = [];
+    if (contact.email) {
+      rows.push(`
+        <a href="mailto:${escapeHtml(contact.email)}" class="flex items-center gap-2.5 text-sm text-slate-700 border border-slate-200 rounded-lg px-3 py-2 hover:border-slate-300 hover:bg-slate-50 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.007 1.872l-7.5 5.25a2.25 2.25 0 0 1-2.486 0l-7.5-5.25A2.25 2.25 0 0 1 2.25 6.993V6.75" /></svg>
+          <span class="truncate">${escapeHtml(contact.email)}</span>
+        </a>
+      `);
+    }
+    if (contact.url) {
+      const href = contact.url.match(/^https?:\/\//i) ? contact.url : "https://" + contact.url;
+      rows.push(`
+        <a href="${escapeHtml(href)}" target="_blank" rel="noopener" class="flex items-center gap-2.5 text-sm text-slate-700 border border-slate-200 rounded-lg px-3 py-2 hover:border-slate-300 hover:bg-slate-50 transition">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" /></svg>
+          <span class="truncate">${escapeHtml(contact.url)}</span>
+        </a>
+      `);
+    }
+    const modalNotes = (contact.noteList && contact.noteList.length)
+      ? contact.noteList
+      : (contact.notes ? [contact.notes] : []);
+
+    if (rows.length === 0 && modalNotes.length === 0) {
+      rows.push(`<p class="text-sm text-slate-400">Keine weiteren Informationen zu diesem Kontakt hinterlegt.</p>`);
+    }
+    if (modalNotes.length) {
+      rows.push(`
+        <div class="border border-slate-200 rounded-lg px-3 py-2.5">
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">${modalNotes.length > 1 ? "Notizen" : "Notiz"}</p>
+          ${modalNotes.length > 1
+            ? `<ul class="list-disc pl-4 space-y-1 text-sm text-slate-700 marker:text-slate-400">${modalNotes.map(n => `<li class="whitespace-pre-wrap leading-snug">${escapeHtml(n)}</li>`).join("")}</ul>`
+            : `<p class="text-sm text-slate-700 whitespace-pre-wrap leading-snug">${escapeHtml(modalNotes[0])}</p>`}
+        </div>
+      `);
+    }
+    body.innerHTML = rows.join("");
+
+    const copyText = [contact.name, contact.company ? `(${contact.company})` : "", contact.email, contact.url, modalNotes.length ? `— ${modalNotes.join("; ")}` : ""].filter(Boolean).join(" ");
+    const copyBtn = document.getElementById("modalCopyBtn");
+    copyBtn.onclick = () => {
+      copyToClipboard(copyText).then(() => {
+        const label = document.getElementById("modalCopyLabel");
+        const original = label.textContent;
+        label.textContent = "Kopiert!";
+        setTimeout(() => { label.textContent = original; }, 1300);
+      });
+    };
+
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  }
+
+  function closeContactModal() {
+    const modal = document.getElementById("contactModal");
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+
+  function renderDetailPanel(group) {
+    if (!group) {
+      document.getElementById("detailPanel").classList.add("hidden");
+      selectedGroupKey = null;
+      currentDetailGroup = null;
+      return;
+    }
+    document.getElementById("detailPanel").classList.remove("hidden");
+    document.getElementById("detailEventTitle").textContent = group.event;
+
+    const dateLabel = group.dateStart === group.dateEnd || !group.dateEnd
+      ? formatDate(group.dateStart)
+      : `${formatDate(group.dateStart)} – ${formatDate(group.dateEnd)}`;
+
+    const ratingRounded = Math.round(group.avgRating);
+    const multiRecordNote = group.records.length > 1
+      ? `<span class="text-slate-400">(zusammengeführt aus ${group.records.length} Einträgen)</span>`
+      : "";
+
+    document.getElementById("detailEmployees").innerHTML = group.employees.map(name => `
+      <span class="inline-flex items-center gap-1.5 bg-white border border-slate-200 rounded-full pl-1 pr-2.5 py-1">
+        <span class="h-5 w-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0 ${avatarColor(name)}">${escapeHtml(initials(name))}</span>
+        <span class="text-xs font-semibold text-slate-700">${escapeHtml(name)}</span>
+      </span>
+    `).join("");
+
+    document.getElementById("detailMeta").innerHTML = `
+      <span><strong class="text-slate-700">${dateLabel}</strong></span>
+      <span>&middot;</span>
+      ${ratingCell(ratingRounded)}
+      <span>&middot;</span>
+      ${group.statuses.map(s => statusPill(s)).join(" ")}
+      ${multiRecordNote}
+    `;
+
+    const contacts = group.contactNames.map(parseContact);
+
+    document.getElementById("detailStatContacts").textContent = group.totalContactsCount;
+    document.getElementById("detailStatContactsNamed").textContent = `davon ${contacts.length} namentlich bekannt`;
+    document.getElementById("detailStatStartups").textContent = group.startups.length;
+    document.getElementById("detailStatRating").textContent = ratingRounded;
+
+    document.getElementById("detailContactCount").textContent = contacts.length;
+    const grid = document.getElementById("detailContactsGrid");
+    currentDetailContacts = contacts;
+    currentDetailGroup = group;
+    if (contacts.length === 0) {
+      grid.innerHTML = `<p class="text-sm text-slate-400 col-span-full">Keine Kontakte erfasst.</p>`;
+    } else {
+      grid.innerHTML = contacts.map((c, idx) => {
+        const notesArr = c.noteList && c.noteList.length ? c.noteList : (c.notes ? [c.notes] : []);
+        const contactMethod = c.email || c.url;
+        return `
+        <div class="flex items-start gap-2.5 bg-white border border-slate-200 hover:border-slate-300 rounded-lg px-2.5 py-2 cursor-pointer transition" data-contact-idx="${idx}">
+          <div class="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 ${avatarColor(c.name)}">${escapeHtml(initials(c.name))}</div>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm font-semibold text-slate-800 truncate">${escapeHtml(c.name)}</p>
+            ${c.company ? `<p class="text-xs font-medium text-slate-500 truncate">${escapeHtml(c.company)}</p>` : ""}
+            ${contactMethod ? `<p class="text-xs text-slate-400 truncate">${escapeHtml(contactMethod)}</p>` : ""}
+            ${(!c.company && !contactMethod && !notesArr.length) ? `<p class="text-xs text-slate-400 truncate">Keine weiteren Details</p>` : ""}
+            ${notesArr.length ? `
+            <div class="mt-1.5 border-t border-slate-100 pt-1.5">
+              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">${notesArr.length > 1 ? "Notizen" : "Notiz"}</p>
+              ${notesArr.length > 1
+                ? `<ul class="list-disc pl-4 space-y-0.5 text-xs text-slate-600 marker:text-slate-400">${notesArr.slice(0, 4).map(n => `<li class="leading-snug">${escapeHtml(n)}</li>`).join("")}${notesArr.length > 4 ? `<li class="list-none text-slate-400">+${notesArr.length - 4} weitere</li>` : ""}</ul>`
+                : `<p class="text-xs text-slate-600 leading-snug" style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;">${escapeHtml(notesArr[0])}</p>`}
+            </div>` : ""}
+          </div>
+          ${(c.email || c.url || notesArr.length) ? `<span class="shrink-0 text-slate-300 mt-0.5"><svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" /></svg></span>` : ""}
+        </div>
+      `;
+      }).join("");
+
+      grid.querySelectorAll("[data-contact-idx]").forEach(card => {
+        card.addEventListener("click", () => {
+          const idx = Number(card.getAttribute("data-contact-idx"));
+          showContactModal(currentDetailContacts[idx]);
+        });
+      });
+    }
+
+    document.getElementById("detailStartupCount").textContent = group.startups.length;
+    const startupsList = document.getElementById("detailStartupsList");
+    startupsList.innerHTML = group.startups.length
+      ? group.startups.map(s => startupBadge(s)).join("")
+      : `<p class="text-sm text-slate-400">Keine Startups zugeordnet.</p>`;
+
+    const tipsSection = document.getElementById("detailTipsSection");
+    const tipsGrid = document.getElementById("detailTipsGrid");
+    const tips = eventTipsIndex.get(normalizeEventKey(group.event));
+    const activeCats = tips ? TIP_CATEGORIES.filter(c => tips[c.key] && tips[c.key].length) : [];
+    if (activeCats.length) {
+      tipsGrid.innerHTML = activeCats.map(c => `
+        <div class="bg-white border border-slate-200 rounded-lg px-3 py-2.5">
+          <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">${c.label}</p>
+          <ul class="list-disc pl-4 space-y-0.5 text-sm text-slate-700 marker:text-slate-400">
+            ${tips[c.key].map(t => `<li class="leading-snug">${escapeHtml(t)}</li>`).join("")}
+          </ul>
+        </div>
+      `).join("");
+      tipsSection.classList.remove("hidden");
+    } else {
+      tipsGrid.innerHTML = "";
+      tipsSection.classList.add("hidden");
+    }
+
+    document.getElementById("detailPanel").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function renderTable(events) {
+    const tbody = document.getElementById("tableBody");
+    const emptyState = document.getElementById("emptyState");
+    const totalPages = Math.max(1, Math.ceil(events.length / PAGE_SIZE));
+    currentPage = Math.min(currentPage, totalPages);
+    const start = (currentPage - 1) * PAGE_SIZE;
+    const pageItems = events.slice(start, start + PAGE_SIZE);
+
+    if (events.length === 0) {
+      tbody.innerHTML = "";
+      emptyState.classList.remove("hidden"); emptyState.classList.add("flex");
+    } else {
+      emptyState.classList.add("hidden"); emptyState.classList.remove("flex");
+    }
+
+    tbody.innerHTML = pageItems.map((e, i) => {
+      const globalIdx = allEvents.indexOf(e);
+      const group = indexToGroup.get(globalIdx);
+      const isSelected = group && group.key === selectedGroupKey;
+      const isLowPerformer = e.rating > 0 && e.rating < 5;
+      return `
+      <tr class="cursor-pointer hover:bg-slate-50 transition fade-in ${isSelected ? 'bg-indigo-50/60' : ''} ${isLowPerformer ? 'border-l-4 border-l-rose-400' : 'border-l-4 border-l-transparent'}" data-global-idx="${globalIdx}">
+        <td class="px-3 py-1.5">
+          <div class="flex items-center gap-2.5">
+            <div class="h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0 ${avatarColor(e.employee)}">${escapeHtml(initials(e.employee))}</div>
+            <span class="font-medium text-slate-700 whitespace-nowrap">${escapeHtml(e.employee)}</span>
+          </div>
+        </td>
+        <td class="px-3 py-1.5">
+          <div class="font-semibold text-slate-800 whitespace-nowrap">${escapeHtml(e.event)}</div>
+          <div class="text-xs text-slate-400">${formatDate(e.date)}</div>
+        </td>
+        <td class="px-3 py-1.5">${ratingCell(e.rating)}</td>
+        <td class="px-3 py-1.5 font-medium text-slate-600">${e.contactsCount}</td>
+        <td class="px-3 py-1.5 text-slate-600">
+          ${e.contactNames.length ? e.contactNames.map(raw => {
+            const c = parseContact(raw);
+            const sub =
+              (c.company ? `<div class="text-xs text-slate-500 truncate">${escapeHtml(c.company)}</div>` : "") +
+              (c.notes ? `<div class="text-xs text-amber-700 truncate">${escapeHtml(c.notes)}</div>` : "");
+            return `<div class="max-w-[220px] mb-0.5 last:mb-0">
+              <div class="whitespace-nowrap font-medium text-slate-700 truncate">${escapeHtml(c.name)}</div>
+              ${sub}
+            </div>`;
+          }).join("") : '<span class="text-slate-300">–</span>'}
+        </td>
+        <td class="px-3 py-1.5">
+          <div class="flex flex-wrap gap-1 max-w-[200px]">
+            ${e.startups.length ? e.startups.map(s => startupChip(s)).join("") : '<span class="text-xs text-slate-300">–</span>'}
+          </div>
+        </td>
+        <td class="px-3 py-1.5 text-slate-500 whitespace-nowrap">${formatDate(e.date)}</td>
+        <td class="px-3 py-1.5">${statusPill(e.status)}</td>
+      </tr>
+    `;
+    }).join("");
+
+    tbody.querySelectorAll("tr[data-global-idx]").forEach(tr => {
+      tr.addEventListener("click", () => {
+        const globalIdx = Number(tr.getAttribute("data-global-idx"));
+        const group = indexToGroup.get(globalIdx);
+        if (!group) return;
+        if (selectedGroupKey === group.key) {
+          selectedGroupKey = null;
+          renderDetailPanel(null);
+        } else {
+          selectedGroupKey = group.key;
+          renderDetailPanel(group);
+        }
+        renderViews(window._filteredEvents || allEvents);
+      });
+    });
+
+    document.getElementById("resultCount").textContent = `${events.length} ${events.length === 1 ? "Eintrag" : "Einträge"}`;
+    const rangeStart = events.length === 0 ? 0 : start + 1;
+    const rangeEnd = Math.min(start + PAGE_SIZE, events.length);
+    document.getElementById("pageRangeLabel").textContent = `${rangeStart}–${rangeEnd}`;
+    document.getElementById("pageNumberLabel").textContent = currentPage;
+    document.getElementById("prevPageBtn").disabled = currentPage <= 1;
+    document.getElementById("nextPageBtn").disabled = currentPage >= totalPages;
+  }
+
+  // Jahresstreifen-Zusatzansicht: zeigt dieselbe Seite (pageItems) wie die
+  // Tabelle, nur als chronologische Zeitleiste mit Jahres-Trennern.
+  function renderTimeline(events) {
+    const container = document.getElementById("timelineList");
+    const totalPages = Math.max(1, Math.ceil(events.length / PAGE_SIZE));
+    const page = Math.min(currentPage, totalPages);
+    const start = (page - 1) * PAGE_SIZE;
+    const pageItems = [...events.slice(start, start + PAGE_SIZE)]
+      .sort((a, b) => {
+        const at = (a.date && !isNaN(new Date(a.date).getTime())) ? new Date(a.date).getTime() : -Infinity;
+        const bt = (b.date && !isNaN(new Date(b.date).getTime())) ? new Date(b.date).getTime() : -Infinity;
+        return bt - at;
+      });
+
+    let lastYear = null;
+
+    container.innerHTML = pageItems.map((e) => {
+      const globalIdx = allEvents.indexOf(e);
+      const group = indexToGroup.get(globalIdx);
+      const isSelected = group && group.key === selectedGroupKey;
+      const isLowPerformer = e.rating > 0 && e.rating < 5;
+      const hasDate = e.date && !isNaN(new Date(e.date).getTime());
+      const d = hasDate ? new Date(e.date) : null;
+
+      let dividerHtml = "";
+      const yKey = hasDate ? d.getFullYear() : "none";
+      if (yKey !== lastYear) {
+        dividerHtml = `<div class="tl-year-divider"><span class="tl-year-num">${hasDate ? yKey : "Ohne Datum"}</span><span class="tl-year-line"></span></div>`;
+        lastYear = yKey;
+      }
+
+      const dayNum = hasDate ? String(d.getDate()).padStart(2, "0") : "–";
+      const monthAbbr = hasDate ? d.toLocaleDateString("de-DE", { month: "short" }).toUpperCase().replace(".", "") : "–";
+      const dotClass = e.status === "Erledigt" ? "tl-dot-done" : "tl-dot-open";
+
+      return dividerHtml + `
+      <div class="tl-ticket fade-in ${isSelected ? "tl-selected" : ""} ${isLowPerformer ? "tl-flag" : ""}" data-global-idx="${globalIdx}">
+        <div class="tl-date">
+          <span class="tl-daynum">${dayNum}</span>
+          <span class="tl-month">${monthAbbr}</span>
+        </div>
+        <div class="tl-spine ${dotClass}"></div>
+        <div class="tl-body">
+          <div class="tl-head">
+            <span class="tl-ev">${escapeHtml(e.event)}</span>
+            ${ratingCell(e.rating)}
+          </div>
+          <div class="tl-meta">${escapeHtml(e.employee)} · ${e.contactsCount} Kontakte</div>
+          ${e.startups.length ? `<div class="tl-startups">${e.startups.map(s => startupChip(s)).join("")}</div>` : ""}
+        </div>
+        <div class="tl-status">${statusPill(e.status)}</div>
+      </div>
+    `;
+    }).join("");
+
+    container.querySelectorAll(".tl-ticket[data-global-idx]").forEach(el => {
+      el.addEventListener("click", () => {
+        const globalIdx = Number(el.getAttribute("data-global-idx"));
+        const group = indexToGroup.get(globalIdx);
+        if (!group) return;
+        if (selectedGroupKey === group.key) {
+          selectedGroupKey = null;
+          renderDetailPanel(null);
+        } else {
+          selectedGroupKey = group.key;
+          renderDetailPanel(group);
+        }
+        renderViews(window._filteredEvents || allEvents);
+      });
+    });
+  }
+
+  function renderViews(events) {
+    renderTable(events);
+    renderTimeline(events);
+  }
+
+  function updateFilterClearButtons() {
+    document.querySelectorAll(".filter-clear-btn").forEach(btn => {
+      const targetId = btn.getAttribute("data-clear-for");
+      const select = document.getElementById(targetId);
+      const hasValue = select && select.value !== "";
+      btn.classList.toggle("hidden", !hasValue);
+      btn.classList.toggle("flex", hasValue);
+    });
+  }
+
+  function sortEvents(list) {
+    if (!sortState.key) return list;
+    const key = sortState.key;
+    const dir = sortState.dir;
+    return [...list].sort((a, b) => {
+      let av, bv;
+      if (key === "date") {
+        av = (a.date && !isNaN(new Date(a.date).getTime())) ? new Date(a.date).getTime() : -Infinity;
+        bv = (b.date && !isNaN(new Date(b.date).getTime())) ? new Date(b.date).getTime() : -Infinity;
+      } else if (key === "rating" || key === "contactsCount") {
+        av = Number(a[key]) || 0;
+        bv = Number(b[key]) || 0;
+      } else {
+        av = (a[key] || "").toString().toLowerCase();
+        bv = (b[key] || "").toString().toLowerCase();
+      }
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }
+
+  function updateSortArrows() {
+    document.querySelectorAll("th[data-sort-key]").forEach(th => {
+      const arrow = th.querySelector(".sort-arrow");
+      const key = th.getAttribute("data-sort-key");
+      if (!arrow) return;
+      arrow.textContent = sortState.key === key ? (sortState.dir === 1 ? "▲" : "▼") : "";
+    });
+  }
+
+  function updateTopEventBanner(filtered) {
+    const banner = document.getElementById("topEventBanner");
+    const textEl = document.getElementById("topEventText");
+    const groupsInView = new Map();
+    filtered.forEach(e => {
+      const idx = allEvents.indexOf(e);
+      const group = indexToGroup.get(idx);
+      if (group) groupsInView.set(group.key, group);
+    });
+    const groups = [...groupsInView.values()].filter(g => g.avgRating > 0);
+    if (groups.length === 0) {
+      banner.classList.add("hidden"); banner.classList.remove("flex");
+      return;
+    }
+    groups.sort((a, b) => (b.avgRating - a.avgRating) || (b.totalContactsCount - a.totalContactsCount));
+    const top = groups[0];
+    textEl.innerHTML = `Top Event: <strong>${escapeHtml(top.event)}</strong> — Ø Rating ${top.avgRating.toFixed(1)}, ${top.totalContactsCount} Kontakte`;
+    banner.classList.remove("hidden"); banner.classList.add("flex");
+  }
+
+  function applyFilters() {
+    const query = document.getElementById("searchInput").value.trim().toLowerCase();
+    const status = document.getElementById("statusFilter").value;
+    const employee = document.getElementById("employeeFilter").value;
+    const eventName = document.getElementById("eventFilter").value;
+    const year = document.getElementById("yearFilter").value;
+    const ratingBand = document.getElementById("ratingFilter").value;
+    const dateFrom = document.getElementById("dateFromFilter").value;
+    const dateTo = document.getElementById("dateToFilter").value;
+
+    document.getElementById("clearDateFilterBtn").classList.toggle("hidden", !dateFrom && !dateTo);
+    document.getElementById("clearDateFilterBtn").classList.toggle("flex", !!(dateFrom || dateTo));
+
+    const filtered = allEvents.filter(e => {
+      const matchesQuery = !query || [e.event, e.employee, ...(e.contactNames || []), ...(e.startups || [])].join(" ").toLowerCase().includes(query);
+      const matchesStatus = !status || e.status === status;
+      const matchesEmployee = !employee || e.employee === employee;
+      const matchesEvent = !eventName || e.event === eventName;
+      const eventYear = (e.date && !isNaN(new Date(e.date).getTime())) ? String(new Date(e.date).getFullYear()) : null;
+      const matchesYear = !year || eventYear === year;
+      const matchesRating = !ratingBand
+        || (ratingBand === "top" && e.rating >= 8)
+        || (ratingBand === "mid" && e.rating >= 5 && e.rating <= 7)
+        || (ratingBand === "low" && e.rating > 0 && e.rating < 5);
+      const eventTime = (e.date && !isNaN(new Date(e.date).getTime())) ? new Date(e.date).getTime() : null;
+      const matchesDateFrom = !dateFrom || (eventTime !== null && eventTime >= new Date(dateFrom).getTime());
+      const matchesDateTo = !dateTo || (eventTime !== null && eventTime <= new Date(dateTo).getTime() + 86399999);
+      return matchesQuery && matchesStatus && matchesEmployee && matchesEvent && matchesYear && matchesRating && matchesDateFrom && matchesDateTo;
+    });
+
+    const sorted = sortEvents(filtered);
+
+    renderViews(sorted);
+    window._filteredEvents = sorted;
+    updateFilterClearButtons();
+    updateTopEventBanner(filtered);
+    updateSortArrows();
+
+    if (eventName && sorted.length >= 1) {
+      const globalIdx = allEvents.indexOf(sorted[0]);
+      const group = indexToGroup.get(globalIdx);
+      if (group) {
+        selectedGroupKey = group.key;
+        renderDetailPanel(group);
+        renderViews(sorted);
+      }
+    } else if (!eventName) {
+      selectedGroupKey = null;
+      renderDetailPanel(null);
+    }
+  }
+
+  function renderAll(events) {
+    allEvents = events;
+    currentPage = 1;
+    selectedGroupKey = null;
+    rebuildGroupIndex(events);
+    eventTipsIndex = buildEventTipsIndex(events);
+    populateFilters(events);
+    renderStats(events);
+    renderDetailPanel(null);
+    applyFilters();
+  }
+
+  function setIndicator(mode) {
+    const fallback = document.getElementById("fallbackIndicator");
+    fallback.classList.add("hidden"); fallback.classList.remove("inline-flex");
+    if (mode === "fallback") { fallback.classList.remove("hidden"); fallback.classList.add("inline-flex"); }
+  }
+
+  function setLastUpdated() {
+    const now = new Date();
+    document.getElementById("lastUpdated").textContent = "Zuletzt aktualisiert: " + now.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  function fetchViaJSONP(url) {
+    return new Promise((resolve, reject) => {
+      const callbackName = "__eventTrackerCb_" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
+      const script = document.createElement("script");
+      let settled = false;
+
+      const timeoutId = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new Error("Zeitüberschreitung – keine Antwort vom Web-App-Endpunkt (JSONP)"));
+      }, 15000);
+
+      function cleanup() {
+        clearTimeout(timeoutId);
+        delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      window[callbackName] = function(data) {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        resolve(data);
+      };
+
+      script.onerror = function() {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        reject(new Error("JSONP-Skript konnte nicht geladen werden (URL falsch, Deployment nicht aktiv, oder ?callback= wird von doGet noch nicht unterstützt)"));
+      };
+
+      const separator = url.includes("?") ? "&" : "?";
+      script.src = url + separator + "callback=" + callbackName;
+      document.head.appendChild(script);
+    });
+  }
+
+  let hasLoadedOnce = false;
+
+  function showMainContent() {
+    document.getElementById("initialLoader").classList.add("hidden");
+    document.getElementById("mainContent").classList.remove("hidden");
+  }
+
+  async function loadData() {
+    const btn = document.getElementById("refreshBtn");
+    const icon = document.getElementById("refreshIcon");
+    const label = document.getElementById("refreshLabel");
+    btn.disabled = true;
+    icon.classList.add("animate-spin");
+    label.textContent = "Aktualisiere…";
+    try {
+      const data = await fetchViaJSONP(WEBAPP_URL);
+      const rawList = Array.isArray(data) ? data : (data.events || data.data || []);
+      if (!Array.isArray(rawList) || rawList.length === 0) throw new Error("Keine Daten in der Antwort gefunden");
+      renderAll(rawList.map(normalizeRecord));
+      setIndicator("off");
+      setLastUpdated();
+      document.getElementById("fetchErrorBox").classList.add("hidden");
+    } catch (err) {
+      console.warn("Live-Daten konnten nicht geladen werden, verwende Beispieldaten:", err);
+      renderAll(SAMPLE_DATA.map(normalizeRecord));
+      setIndicator("fallback");
+      setLastUpdated();
+      const box = document.getElementById("fetchErrorBox");
+      box.textContent = "Laden fehlgeschlagen: " + (err && err.message ? err.message : String(err)) + " — stelle sicher, dass deine Apps-Script-Funktion ?callback= unterstützt (JSONP) und neu deployed wurde.";
+      box.classList.remove("hidden");
+    } finally {
+      btn.disabled = false;
+      icon.classList.remove("animate-spin");
+      label.textContent = "Aktualisieren";
+      if (!hasLoadedOnce) {
+        hasLoadedOnce = true;
+        showMainContent();
+      }
+    }
+  }
+
+  document.getElementById("currentDate").textContent = new Date().toLocaleDateString("de-DE", {
+    weekday: "long", day: "2-digit", month: "long", year: "numeric"
+  });
+
+  document.getElementById("searchInput").addEventListener("input", applyFilters);
+  document.getElementById("statusFilter").addEventListener("change", applyFilters);
+  document.getElementById("employeeFilter").addEventListener("change", applyFilters);
+  document.getElementById("eventFilter").addEventListener("change", applyFilters);
+  document.getElementById("yearFilter").addEventListener("change", applyFilters);
+  document.getElementById("ratingFilter").addEventListener("change", applyFilters);
+  document.getElementById("dateFromFilter").addEventListener("change", applyFilters);
+  document.getElementById("dateToFilter").addEventListener("change", applyFilters);
+  document.getElementById("clearDateFilterBtn").addEventListener("click", () => {
+    document.getElementById("dateFromFilter").value = "";
+    document.getElementById("dateToFilter").value = "";
+    applyFilters();
+  });
+  document.getElementById("statCardTop").addEventListener("click", () => {
+    document.getElementById("ratingFilter").value = "top";
+    applyFilters();
+    document.getElementById("viewTable").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  document.getElementById("statCardLow").addEventListener("click", () => {
+    document.getElementById("ratingFilter").value = "low";
+    applyFilters();
+    document.getElementById("viewTable").scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  document.querySelectorAll(".filter-clear-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const targetId = btn.getAttribute("data-clear-for");
+      const select = document.getElementById(targetId);
+      if (select) select.value = "";
+      applyFilters();
+    });
+  });
+  document.getElementById("detailCloseBtn").addEventListener("click", () => {
+    selectedGroupKey = null;
+    renderDetailPanel(null);
+    renderViews(window._filteredEvents || allEvents);
+  });
+  document.getElementById("prevPageBtn").addEventListener("click", () => { currentPage--; renderViews(window._filteredEvents || allEvents); });
+  document.getElementById("nextPageBtn").addEventListener("click", () => { currentPage++; renderViews(window._filteredEvents || allEvents); });
+
+  document.querySelectorAll("th[data-sort-key]").forEach(th => {
+    th.addEventListener("click", () => {
+      const key = th.getAttribute("data-sort-key");
+      if (sortState.key === key) { sortState.dir *= -1; } else { sortState.key = key; sortState.dir = 1; }
+      currentPage = 1;
+      applyFilters();
+    });
+  });
+
+  function setActiveView(view) {
+    const tableBtn = document.getElementById("viewTableBtn");
+    const timelineBtn = document.getElementById("viewTimelineBtn");
+    const tableView = document.getElementById("viewTable");
+    const timelineView = document.getElementById("viewTimeline");
+    const isTable = view === "table";
+    tableView.classList.toggle("hidden", !isTable);
+    timelineView.classList.toggle("hidden", isTable);
+    tableBtn.classList.toggle("bg-white", isTable);
+    tableBtn.classList.toggle("text-slate-900", isTable);
+    tableBtn.classList.toggle("shadow-sm", isTable);
+    tableBtn.classList.toggle("text-slate-500", !isTable);
+    timelineBtn.classList.toggle("bg-white", !isTable);
+    timelineBtn.classList.toggle("text-slate-900", !isTable);
+    timelineBtn.classList.toggle("shadow-sm", !isTable);
+    timelineBtn.classList.toggle("text-slate-500", isTable);
+    try { localStorage.setItem("eventTrackerView", view); } catch (e) {}
+  }
+  document.getElementById("viewTableBtn").addEventListener("click", () => setActiveView("table"));
+  document.getElementById("viewTimelineBtn").addEventListener("click", () => setActiveView("timeline"));
+
+  let savedView = "table";
+  try { savedView = localStorage.getItem("eventTrackerView") || "table"; } catch (e) {}
+  if (savedView === "timeline") setActiveView("timeline");
+
+  function csvEscape(val) {
+    const str = String(val ?? "");
+    if (/[",;\n]/.test(str)) return '"' + str.replace(/"/g, '""') + '"';
+    return str;
+  }
+
+  function downloadCsv(rows, filenamePrefix) {
+    const headers = ["Mitarbeiter", "Event", "Rating", "Kontakte", "Kontaktnamen", "Startups", "Datum", "Status", "Anreise", "Unterkunft", "Side-Events", "Sonstige Tipps"];
+    const lines = [headers.join(";")];
+    rows.forEach(e => {
+      lines.push([
+        e.employee, e.event, e.rating, e.contactsCount,
+        (e.contactNames || []).join(", "), (e.startups || []).join(", "),
+        formatDate(e.date), e.status,
+        e.travelTip || "", e.stayTip || "", e.sideEventTip || "", e.otherTip || ""
+      ].map(csvEscape).join(";"));
+    });
+    const csvContent = "\uFEFF" + lines.join("\r\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const dateStr = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `${filenamePrefix}-${dateStr}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  document.getElementById("exportCsvBtn").addEventListener("click", () => {
+    downloadCsv(window._filteredEvents || allEvents, "event-tracker-export");
+  });
+
+  document.getElementById("exportEventCsvBtn").addEventListener("click", () => {
+    if (!currentDetailGroup) return;
+    const safeName = currentDetailGroup.event.replace(/[^a-z0-9]+/gi, "-").toLowerCase().replace(/^-+|-+$/g, "");
+    downloadCsv(currentDetailGroup.records, `event-${safeName || "export"}`);
+  });
+
+  document.getElementById("copyAllContactsBtn").addEventListener("click", () => {
+    if (!currentDetailContacts.length) return;
+    const text = currentDetailContacts.map(c => {
+      const parts = [c.name, c.company ? `(${c.company})` : "", c.email, c.url, c.notes ? `— ${c.notes}` : ""].filter(Boolean);
+      return parts.join(" ");
+    }).join("\n");
+    copyToClipboard(text).then(() => {
+      const label = document.getElementById("copyAllContactsLabel");
+      const original = label.textContent;
+      label.textContent = "Kopiert!";
+      setTimeout(() => { label.textContent = original; }, 1500);
+    });
+  });
+
+  document.getElementById("helpBtn").addEventListener("click", () => {
+    const modal = document.getElementById("helpModal");
+    modal.classList.remove("hidden");
+    modal.classList.add("flex");
+  });
+  function closeHelpModal() {
+    const modal = document.getElementById("helpModal");
+    modal.classList.add("hidden");
+    modal.classList.remove("flex");
+  }
+  document.getElementById("helpCloseBtn").addEventListener("click", closeHelpModal);
+  document.getElementById("helpModal").addEventListener("click", (e) => {
+    if (e.target.id === "helpModal") closeHelpModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeHelpModal();
+  });
+
+  document.getElementById("modalCloseBtn").addEventListener("click", closeContactModal);
+  document.getElementById("contactModal").addEventListener("click", (e) => {
+    if (e.target.id === "contactModal") closeContactModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeContactModal();
+  });
+
+  // Einfacher Passwortschutz: reine Client-Hürde, kein echter Zugriffsschutz
+  // (wer die Seite lädt, kann Passwort und Inhalt trotzdem im Quelltext sehen).
+  const AUTH_PASSWORD = "Sp1nlabEventtracker";
+  const AUTH_KEY = "eventTrackerAuthed";
+
+  function hideAuthGate() {
+    const gate = document.getElementById("authGate");
+    gate.classList.add("hidden");
+    gate.classList.remove("flex");
+  }
+
+  let isAuthed = false;
+  try { isAuthed = localStorage.getItem(AUTH_KEY) === "1"; } catch (e) {}
+  if (isAuthed) {
+    hideAuthGate();
+  } else {
+    document.getElementById("authInput").focus();
+  }
+
+  document.getElementById("authForm").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const val = document.getElementById("authInput").value;
+    if (val === AUTH_PASSWORD) {
+      try { localStorage.setItem(AUTH_KEY, "1"); } catch (err) {}
+      document.getElementById("authError").classList.add("hidden");
+      hideAuthGate();
+    } else {
+      document.getElementById("authError").classList.remove("hidden");
+      document.getElementById("authInput").value = "";
+      document.getElementById("authInput").focus();
+    }
+  });
+
+  loadData();
+</script>
+</body>
+</html>
